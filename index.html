@@ -3,56 +3,897 @@
 <head>
   
   
-  <title>Test GitHub Pages</title>
+  <title>Szlak Popiołów</title>
   <style>
     html, body {
       margin: 0;
       width: 100%;
       height: 100%;
+      overflow: hidden;
+      background: #0f1311;
       font-family: Arial, sans-serif;
-      background: #111;
-      color: #fff;
+      touch-action: none;
     }
 
-    body {
+    #app {
+      width: 100%;
+      height: 100%;
+    }
+
+    canvas {
+      display: block;
+      outline: none;
+    }
+
+    .ui {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      padding: 12px 14px;
+      background: rgba(0, 0, 0, 0.42);
+      color: #e7e0cf;
+      border: 1px solid rgba(231, 224, 207, 0.18);
+      border-radius: 10px;
+      font-size: 14px;
+      line-height: 1.5;
+      z-index: 20;
+      user-select: none;
+      min-width: 240px;
+      backdrop-filter: blur(6px);
+    }
+
+    .title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .hint {
+      color: #cbbda2;
+    }
+
+    .mobile-controls {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 30;
+    }
+
+    .joystick-zone {
+      position: absolute;
+      left: 16px;
+      bottom: 16px;
+      width: 190px;
+      height: 190px;
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    .joystick-base {
+      position: absolute;
+      left: 20px;
+      bottom: 20px;
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      background: rgba(20, 20, 20, 0.30);
+      border: 1px solid rgba(255, 240, 220, 0.16);
+      backdrop-filter: blur(4px);
+    }
+
+    .joystick-knob {
+      position: absolute;
+      left: 55px;
+      top: 55px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(182, 142, 110, 0.88);
+      border: 1px solid rgba(255, 230, 200, 0.35);
+      box-shadow: 0 0 18px rgba(255, 180, 120, 0.18);
+    }
+
+    .mobile-right {
+      position: absolute;
+      right: 18px;
+      bottom: 24px;
+      width: 160px;
+      height: 160px;
+      pointer-events: none;
+    }
+
+    .mobile-btn {
+      position: absolute;
+      width: 84px;
+      height: 84px;
+      border: 1px solid rgba(255, 240, 220, 0.22);
+      border-radius: 50%;
+      background: rgba(20, 20, 20, 0.42);
+      color: #f0e6d2;
+      font-size: 16px;
+      font-weight: bold;
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-direction: column;
-      gap: 16px;
-      text-align: center;
+      pointer-events: auto;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.18);
     }
 
-    .box {
-      padding: 24px;
-      border: 1px solid #444;
+    .mobile-btn:active,
+    .mobile-btn.active {
+      background: rgba(120, 60, 40, 0.60);
+      border-color: rgba(255, 220, 180, 0.45);
+    }
+
+    .btn-attack {
+      right: 0;
+      bottom: 0;
+    }
+
+    .center-message {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      padding: 14px 18px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 240, 220, 0.16);
+      color: #f0e6d2;
       border-radius: 12px;
-      background: #1b1b1b;
-      max-width: 640px;
+      z-index: 25;
+      display: none;
+      text-align: center;
+      min-width: 260px;
+      backdrop-filter: blur(6px);
     }
 
-    h1 {
-      margin: 0 0 12px;
-      font-size: 32px;
-    }
-
-    p {
-      margin: 6px 0;
-      color: #ddd;
-    }
-
-    .ok {
-      color: #7CFF9E;
-      font-weight: bold;
+    @media (hover: hover) and (pointer: fine) {
+      .mobile-controls {
+        display: none;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="box">
-    <h1>GitHub Pages działa</h1>
-    <p class="ok">Publikacja działa poprawnie.</p>
-    <p>Jeśli widzisz ten ekran, to repo i Pages są ustawione dobrze.</p>
-    <p>Następny krok: podmienimy ten plik na wersję gry.</p>
-  </div>
+  <div id="app"></div>
+
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.159.0/build/three.module.js'
+
+    const app = document.querySelector('#app')
+
+    const scene = new THREE.Scene()
+    scene.background = new THREE.Color(0x0f1311)
+    scene.fog = new THREE.Fog(0x0f1311, 18, 90)
+
+    const camera = new THREE.PerspectiveCamera(
+      72,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      250
+    )
+    camera.position.set(0, 6, 10)
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: 'high-performance',
+    })
+    renderer.setSize(window.innerWidth, window.innerHeight)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.shadowMap.enabled = true
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    renderer.outputColorSpace = THREE.SRGBColorSpace
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1.05
+    app.appendChild(renderer.domElement)
+
+    const ambientLight = new THREE.AmbientLight(0xb8a88f, 0.45)
+    scene.add(ambientLight)
+
+    const hemiLight = new THREE.HemisphereLight(0x7e90b8, 0x1f1812, 0.42)
+    scene.add(hemiLight)
+
+    const moonLight = new THREE.DirectionalLight(0xd7def7, 1.8)
+    moonLight.position.set(12, 20, 10)
+    moonLight.castShadow = true
+    moonLight.shadow.mapSize.width = 2048
+    moonLight.shadow.mapSize.height = 2048
+    moonLight.shadow.camera.near = 0.5
+    moonLight.shadow.camera.far = 120
+    moonLight.shadow.camera.left = -40
+    moonLight.shadow.camera.right = 40
+    moonLight.shadow.camera.top = 40
+    moonLight.shadow.camera.bottom = -40
+    scene.add(moonLight)
+
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(220, 220),
+      new THREE.MeshStandardMaterial({
+        color: 0x1b231e,
+        roughness: 0.98,
+        metalness: 0.02,
+      })
+    )
+    ground.rotation.x = -Math.PI / 2
+    ground.receiveShadow = true
+    scene.add(ground)
+
+    function addWorld() {
+      for (let i = 0; i < 34; i++) {
+        const stone = new THREE.Mesh(
+          new THREE.BoxGeometry(
+            0.8 + Math.random() * 2.0,
+            0.5 + Math.random() * 1.8,
+            0.8 + Math.random() * 2.0
+          ),
+          new THREE.MeshStandardMaterial({
+            color: 0x4a4642,
+            roughness: 0.97,
+            metalness: 0.02,
+          })
+        )
+        stone.position.set(
+          (Math.random() - 0.5) * 90,
+          0.35,
+          (Math.random() - 0.5) * 90
+        )
+        stone.rotation.y = Math.random() * Math.PI
+        stone.castShadow = true
+        stone.receiveShadow = true
+        scene.add(stone)
+      }
+
+      for (let i = 0; i < 18; i++) {
+        const trunk = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.18, 0.24, 2.8, 8),
+          new THREE.MeshStandardMaterial({
+            color: 0x4a3226,
+            roughness: 0.95,
+            metalness: 0.01,
+          })
+        )
+        trunk.position.set(
+          (Math.random() - 0.5) * 80,
+          1.4,
+          (Math.random() - 0.5) * 80
+        )
+        trunk.castShadow = true
+        trunk.receiveShadow = true
+
+        const crown = new THREE.Mesh(
+          new THREE.ConeGeometry(1.4, 3.0, 10),
+          new THREE.MeshStandardMaterial({
+            color: 0x2a382c,
+            roughness: 0.96,
+            metalness: 0.01,
+          })
+        )
+        crown.position.set(trunk.position.x, 3.7, trunk.position.z)
+        crown.castShadow = true
+        crown.receiveShadow = true
+
+        scene.add(trunk)
+        scene.add(crown)
+      }
+
+      const altar = new THREE.Mesh(
+        new THREE.CylinderGeometry(2.6, 3.2, 0.8, 24),
+        new THREE.MeshStandardMaterial({
+          color: 0x5c564d,
+          roughness: 0.92,
+          metalness: 0.05,
+        })
+      )
+      altar.position.set(0, 0.4, 0)
+      altar.receiveShadow = true
+      altar.castShadow = true
+      scene.add(altar)
+    }
+
+    addWorld()
+
+    const player = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.45, 1.0, 4, 10),
+      new THREE.MeshStandardMaterial({
+        color: 0x8d7f6b,
+        roughness: 0.84,
+        metalness: 0.08,
+      })
+    )
+    player.position.set(0, 1.0, 0)
+    player.castShadow = true
+    scene.add(player)
+
+    const sword = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.12, 1.2),
+      new THREE.MeshStandardMaterial({
+        color: 0xc8c8d2,
+        roughness: 0.35,
+        metalness: 0.9,
+      })
+    )
+    sword.position.set(0.45, 1.1, 0.1)
+    sword.castShadow = true
+    player.add(sword)
+
+    const slash = new THREE.Mesh(
+      new THREE.BoxGeometry(1.5, 1.0, 1.8),
+      new THREE.MeshStandardMaterial({
+        color: 0xffa45a,
+        transparent: true,
+        opacity: 0,
+      })
+    )
+    slash.visible = false
+    scene.add(slash)
+
+    const input = {
+      forward: false,
+      backward: false,
+      left: false,
+      right: false,
+      attack: false,
+      attackPressed: false,
+      moveX: 0,
+      moveY: 0,
+    }
+
+    const playerState = {
+      hp: 100,
+      maxHp: 100,
+      speed: 5.5,
+      attackDuration: 0.18,
+      attackCooldown: 0.32,
+      attackTimer: 0,
+      cooldownTimer: 0,
+      isAttacking: false,
+      hurtTimer: 0,
+      dead: false,
+    }
+
+    const playerDirection = new THREE.Vector3(0, 0, 1)
+
+    const cameraState = {
+      yaw: 0,
+      pitch: 0.48,
+      distance: 8.8,
+      targetHeight: 1.4,
+      minPitch: 0.18,
+      maxPitch: 1.15,
+    }
+
+    const enemies = []
+    let wave = 1
+    let waveRespawnTimer = 0
+
+    function createEnemy(x, z, type = 'grunt') {
+      const group = new THREE.Group()
+
+      const color = type === 'elite' ? 0x8a2424 : 0x6d1f1f
+      const scale = type === 'elite' ? 1.18 : 1.0
+      const hpMax = type === 'elite' ? 180 : 100
+      const speed = type === 'elite' ? 1.6 : 2.0
+      const damage = type === 'elite' ? 14 : 8
+
+      const body = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.42 * scale, 0.9 * scale, 4, 8),
+        new THREE.MeshStandardMaterial({
+          color,
+          roughness: 0.82,
+          metalness: 0.06,
+        })
+      )
+      body.position.y = 1.0 * scale
+      body.castShadow = true
+      group.add(body)
+
+      const hpBarBg = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.5, 0.18),
+        new THREE.MeshBasicMaterial({ color: 0x220000 })
+      )
+      hpBarBg.position.set(0, 2.4 * scale, 0)
+      group.add(hpBarBg)
+
+      const hpBar = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.4, 0.12),
+        new THREE.MeshBasicMaterial({ color: 0x55dd66 })
+      )
+      hpBar.position.set(0, 2.4 * scale, 0.01)
+      group.add(hpBar)
+
+      group.position.set(x, 0, z)
+      scene.add(group)
+
+      enemies.push({
+        group,
+        body,
+        hpBar,
+        hpBarBg,
+        state: {
+          hp: hpMax,
+          maxHp: hpMax,
+          speed,
+          damage,
+          attackRange: 1.45 * scale,
+          chaseRange: 20,
+          attackCooldown: 1.0 + Math.random() * 0.4,
+          attackTimer: Math.random() * 0.5,
+          hitFlash: 0,
+          alive: true,
+          type,
+        },
+      })
+    }
+
+    function spawnWave(level) {
+      const count = Math.min(3 + level, 10)
+
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2 + Math.random() * 0.45
+        const radius = 10 + Math.random() * 10
+        const x = Math.cos(angle) * radius
+        const z = Math.sin(angle) * radius
+        const elite = level >= 3 && i === count - 1
+        createEnemy(x, z, elite ? 'elite' : 'grunt')
+      }
+    }
+
+    spawnWave(wave)
+
+    function setKey(key, value) {
+      if (key === 'w') input.forward = value
+      if (key === 's') input.backward = value
+      if (key === 'a') input.left = value
+      if (key === 'd') input.right = value
+    }
+
+    window.addEventListener('keydown', (e) => {
+      const key = e.key.toLowerCase()
+
+      if (key === ' ') {
+        if (!input.attack) input.attackPressed = true
+        input.attack = true
+        return
+      }
+
+      setKey(key, true)
+    })
+
+    window.addEventListener('keyup', (e) => {
+      const key = e.key.toLowerCase()
+
+      if (key === ' ') {
+        input.attack = false
+        return
+      }
+
+      setKey(key, false)
+    })
+
+    let mouseLook = false
+    let lastMouseX = 0
+    let lastMouseY = 0
+
+    renderer.domElement.addEventListener('mousedown', (e) => {
+      if (e.button === 2) {
+        mouseLook = true
+        lastMouseX = e.clientX
+        lastMouseY = e.clientY
+      }
+
+      if (e.button === 0) {
+        if (!input.attack) input.attackPressed = true
+      }
+    })
+
+    window.addEventListener('mouseup', () => {
+      mouseLook = false
+    })
+
+    window.addEventListener('mousemove', (e) => {
+      if (!mouseLook) return
+      const dx = e.clientX - lastMouseX
+      const dy = e.clientY - lastMouseY
+      lastMouseX = e.clientX
+      lastMouseY = e.clientY
+
+      cameraState.yaw -= dx * 0.005
+      cameraState.pitch -= dy * 0.004
+      cameraState.pitch = Math.max(cameraState.minPitch, Math.min(cameraState.maxPitch, cameraState.pitch))
+    })
+
+    window.addEventListener('contextmenu', (e) => e.preventDefault())
+
+    function createMobileControls() {
+      const root = document.createElement('div')
+      root.className = 'mobile-controls'
+      root.innerHTML = `
+        <div class="joystick-zone">
+          <div class="joystick-base">
+            <div class="joystick-knob"></div>
+          </div>
+        </div>
+        <div class="mobile-right">
+          <div class="mobile-btn btn-attack">ATAK</div>
+        </div>
+      `
+      document.body.appendChild(root)
+
+      const zone = root.querySelector('.joystick-zone')
+      const base = root.querySelector('.joystick-base')
+      const knob = root.querySelector('.joystick-knob')
+      const attackBtn = root.querySelector('.btn-attack')
+
+      let joyPointerId = null
+      const radius = 52
+
+      function resetJoystick() {
+        input.moveX = 0
+        input.moveY = 0
+        knob.style.transform = 'translate(0px, 0px)'
+      }
+
+      function updateJoystick(clientX, clientY) {
+        const rect = base.getBoundingClientRect()
+        const cx = rect.left + rect.width / 2
+        const cy = rect.top + rect.height / 2
+
+        let dx = clientX - cx
+        let dy = clientY - cy
+        const len = Math.hypot(dx, dy)
+
+        if (len > radius) {
+          dx = dx / len * radius
+          dy = dy / len * radius
+        }
+
+        input.moveX = dx / radius
+        input.moveY = dy / radius
+        knob.style.transform = `translate(${dx}px, ${dy}px)`
+      }
+
+      zone.addEventListener('pointerdown', (e) => {
+        e.preventDefault()
+        joyPointerId = e.pointerId
+        updateJoystick(e.clientX, e.clientY)
+      })
+
+      zone.addEventListener('pointermove', (e) => {
+        if (e.pointerId !== joyPointerId) return
+        e.preventDefault()
+        updateJoystick(e.clientX, e.clientY)
+      })
+
+      zone.addEventListener('pointerup', (e) => {
+        if (e.pointerId !== joyPointerId) return
+        joyPointerId = null
+        resetJoystick()
+      })
+
+      zone.addEventListener('pointercancel', () => {
+        joyPointerId = null
+        resetJoystick()
+      })
+
+      attackBtn.addEventListener('pointerdown', (e) => {
+        e.preventDefault()
+        attackBtn.classList.add('active')
+        if (!input.attack) input.attackPressed = true
+        input.attack = true
+      })
+
+      attackBtn.addEventListener('pointerup', (e) => {
+        e.preventDefault()
+        attackBtn.classList.remove('active')
+        input.attack = false
+      })
+
+      attackBtn.addEventListener('pointercancel', () => {
+        attackBtn.classList.remove('active')
+        input.attack = false
+      })
+
+      let lookPointerId = null
+      let lastX = 0
+      let lastY = 0
+
+      renderer.domElement.addEventListener('pointerdown', (e) => {
+        const mobileLike = window.matchMedia('(hover: none), (pointer: coarse)').matches
+        if (!mobileLike) return
+        if (e.clientX < window.innerWidth * 0.45) return
+
+        lookPointerId = e.pointerId
+        lastX = e.clientX
+        lastY = e.clientY
+      })
+
+      renderer.domElement.addEventListener('pointermove', (e) => {
+        if (e.pointerId !== lookPointerId) return
+
+        const dx = e.clientX - lastX
+        const dy = e.clientY - lastY
+        lastX = e.clientX
+        lastY = e.clientY
+
+        cameraState.yaw -= dx * 0.01
+        cameraState.pitch -= dy * 0.01
+        cameraState.pitch = Math.max(cameraState.minPitch, Math.min(cameraState.maxPitch, cameraState.pitch))
+      })
+
+      renderer.domElement.addEventListener('pointerup', (e) => {
+        if (e.pointerId === lookPointerId) {
+          lookPointerId = null
+        }
+      })
+
+      renderer.domElement.addEventListener('pointercancel', (e) => {
+        if (e.pointerId === lookPointerId) {
+          lookPointerId = null
+        }
+      })
+
+      resetJoystick()
+    }
+
+    createMobileControls()
+
+    function consumeAttackPress() {
+      const pressed = input.attackPressed
+      input.attackPressed = false
+      return pressed
+    }
+
+    function tryAttack() {
+      if (playerState.dead) return false
+      if (playerState.cooldownTimer > 0 || playerState.isAttacking) return false
+
+      playerState.isAttacking = true
+      playerState.attackTimer = playerState.attackDuration
+      playerState.cooldownTimer = playerState.attackCooldown
+      return true
+    }
+
+    function getAliveEnemies() {
+      return enemies.filter(e => e.state.alive)
+    }
+
+    function updatePlayer(delta) {
+      let moveDir = new THREE.Vector3()
+
+      const forward = new THREE.Vector3(
+        Math.sin(cameraState.yaw),
+        0,
+        Math.cos(cameraState.yaw)
+      ).multiplyScalar(-1)
+
+      const right = new THREE.Vector3(
+        Math.cos(cameraState.yaw),
+        0,
+        -Math.sin(cameraState.yaw)
+      )
+
+      if (Math.abs(input.moveX) > 0.04 || Math.abs(input.moveY) > 0.04) {
+        moveDir.addScaledVector(right, input.moveX)
+        moveDir.addScaledVector(forward, -input.moveY)
+      } else {
+        if (input.forward) moveDir.add(forward)
+        if (input.backward) moveDir.sub(forward)
+        if (input.right) moveDir.add(right)
+        if (input.left) moveDir.sub(right)
+      }
+
+      if (moveDir.lengthSq() > 0) {
+        moveDir.normalize()
+        player.position.addScaledVector(moveDir, playerState.speed * delta)
+
+        player.position.x = Math.max(-95, Math.min(95, player.position.x))
+        player.position.z = Math.max(-95, Math.min(95, player.position.z))
+
+        playerDirection.copy(moveDir)
+        player.rotation.y = Math.atan2(moveDir.x, moveDir.z)
+      }
+
+      if (playerState.cooldownTimer > 0) playerState.cooldownTimer -= delta
+      if (playerState.hurtTimer > 0) playerState.hurtTimer -= delta
+
+      if (playerState.isAttacking) {
+        playerState.attackTimer -= delta
+        const attackOffset = playerDirection.clone().multiplyScalar(1.15)
+        slash.position.copy(player.position).add(attackOffset)
+        slash.position.y = 1.0
+        slash.rotation.y = player.rotation.y
+        slash.visible = true
+        slash.material.opacity = 0.38
+
+        sword.rotation.x = -1.2
+
+        if (playerState.attackTimer <= 0) {
+          playerState.isAttacking = false
+          slash.visible = false
+          slash.material.opacity = 0
+          sword.rotation.x = 0
+        }
+      } else {
+        slash.visible = false
+        slash.material.opacity = 0
+        sword.rotation.x = 0
+      }
+    }
+
+    function updateCombat() {
+      if (!consumeAttackPress()) return
+      if (!tryAttack()) return
+
+      const attackCenter = player.position.clone().add(playerDirection.clone().multiplyScalar(1.5))
+      const attackRadius = 1.7
+
+      for (const enemy of enemies) {
+        if (!enemy.state.alive) continue
+
+        const enemyPos = enemy.group.position.clone().setY(1.0)
+        const distance = attackCenter.distanceTo(enemyPos)
+
+        if (distance <= attackRadius) {
+          const damage = enemy.state.type === 'elite' ? 28 : 36
+          enemy.state.hp -= damage
+          enemy.state.hitFlash = 0.12
+
+          if (enemy.state.hp <= 0) {
+            enemy.state.hp = 0
+            enemy.state.alive = false
+            enemy.group.visible = false
+          }
+        }
+      }
+    }
+
+    function updateEnemies(delta) {
+      let aliveCount = 0
+
+      for (const enemy of enemies) {
+        if (!enemy.state.alive) continue
+        aliveCount++
+
+        const toPlayer = player.position.clone().sub(enemy.group.position)
+        const flat = new THREE.Vector3(toPlayer.x, 0, toPlayer.z)
+        const distance = flat.length()
+
+        if (distance < enemy.state.chaseRange && distance > enemy.state.attackRange && !playerState.dead) {
+          flat.normalize()
+          enemy.group.position.addScaledVector(flat, enemy.state.speed * delta)
+          enemy.group.rotation.y = Math.atan2(flat.x, flat.z)
+        }
+
+        enemy.state.attackTimer -= delta
+
+        if (
+          distance <= enemy.state.attackRange &&
+          enemy.state.attackTimer <= 0 &&
+          !playerState.dead
+        ) {
+          enemy.state.attackTimer = enemy.state.attackCooldown
+
+          if (playerState.hurtTimer <= 0) {
+            playerState.hp -= enemy.state.damage
+            playerState.hurtTimer = 0.35
+
+            if (playerState.hp <= 0) {
+              playerState.hp = 0
+              playerState.dead = true
+            }
+          }
+        }
+
+        if (enemy.state.hitFlash > 0) {
+          enemy.state.hitFlash -= delta
+          enemy.body.material.color.setHex(0xb34747)
+        } else {
+          enemy.body.material.color.setHex(enemy.state.type === 'elite' ? 0x8a2424 : 0x6d1f1f)
+        }
+
+        enemy.hpBar.lookAt(camera.position)
+        enemy.hpBarBg.lookAt(camera.position)
+
+        const ratio = Math.max(0, enemy.state.hp / enemy.state.maxHp)
+        enemy.hpBar.scale.x = ratio
+        enemy.hpBar.position.x = -(1.4 * (1 - ratio)) / 2
+      }
+
+      if (aliveCount === 0 && !playerState.dead) {
+        waveRespawnTimer += delta
+        if (waveRespawnTimer >= 2.2) {
+          waveRespawnTimer = 0
+          for (const enemy of enemies) {
+            scene.remove(enemy.group)
+          }
+          enemies.length = 0
+          wave++
+          spawnWave(wave)
+        }
+      } else {
+        waveRespawnTimer = 0
+      }
+    }
+
+    function updateCamera() {
+      const target = player.position.clone()
+      target.y += cameraState.targetHeight
+
+      const horizontalDistance = cameraState.distance * Math.cos(cameraState.pitch)
+      const verticalDistance = cameraState.distance * Math.sin(cameraState.pitch)
+
+      const desired = new THREE.Vector3(
+        target.x + Math.sin(cameraState.yaw) * horizontalDistance,
+        target.y + verticalDistance,
+        target.z + Math.cos(cameraState.yaw) * horizontalDistance
+      )
+
+      camera.position.lerp(desired, 0.12)
+      camera.lookAt(target)
+    }
+
+    const ui = document.createElement('div')
+    ui.className = 'ui'
+    document.body.appendChild(ui)
+
+    const centerMessage = document.createElement('div')
+    centerMessage.className = 'center-message'
+    document.body.appendChild(centerMessage)
+
+    function updateUI() {
+      const alive = getAliveEnemies().length
+
+      ui.innerHTML = `
+        <div class="title">Szlak Popiołów</div>
+        HP gracza: ${playerState.hp} / ${playerState.maxHp}<br>
+        Wrogowie: ${alive}<br>
+        Fala: ${wave}<br>
+        <span class="hint">Ruch: WASD / joystick</span><br>
+        <span class="hint">Atak: Spacja / LPM / ATAK</span><br>
+        <span class="hint">Kamera: PPM + mysz / przeciąganie po prawej</span>
+      `
+
+      if (playerState.dead) {
+        centerMessage.style.display = 'block'
+        centerMessage.innerHTML = `
+          <strong>Upadłeś na Szlaku Popiołów</strong><br><br>
+          Odśwież stronę, aby zacząć od nowa.
+        `
+      } else {
+        centerMessage.style.display = 'none'
+      }
+    }
+
+    const clock = new THREE.Clock()
+
+    function animate() {
+      requestAnimationFrame(animate)
+
+      const delta = Math.min(clock.getDelta(), 0.033)
+
+      if (!playerState.dead) {
+        updatePlayer(delta)
+        updateCombat(delta)
+        updateEnemies(delta)
+      }
+
+      updateCamera()
+      updateUI()
+      renderer.render(scene, camera)
+    }
+
+    animate()
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight
+      camera.updateProjectionMatrix()
+      renderer.setSize(window.innerWidth, window.innerHeight)
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    })
+  </script>
 </body>
 </html>
